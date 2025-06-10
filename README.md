@@ -7,7 +7,8 @@ A C program that reads data from stdin and sends it to a specified serial device
 - Reads data from stdin (supports pipes and redirected input)
 - Sends data to any specified serial port (e.g., `/dev/ttyAMA1`, `/dev/ttyUSB0`)
 - **Waits for complete transmission** using `tcdrain()` - unlike simple shell redirection
-- Configures serial port with 9600 baud, 8N1 (8 data bits, no parity, 1 stop bit)
+- **Assumes serial port is pre-configured** - doesn't modify existing settings
+- Lightweight and fast - no configuration overhead
 - Comprehensive error handling
 
 ## Setup
@@ -31,7 +32,9 @@ A C program that reads data from stdin and sends it to a specified serial device
    make --version
    ```
 
-### Enable Serial Port
+### Configure Serial Port
+
+**Important**: This tool assumes your serial port is already configured. You must set up the baud rate and other settings before using this tool.
 
 1. Enable the serial port in Raspberry Pi configuration:
    ```bash
@@ -41,12 +44,17 @@ A C program that reads data from stdin and sends it to a specified serial device
    - **Disable** the login shell over serial
    - **Enable** the serial port hardware
 
-2. Add your user to the dialout group for serial access:
+2. Configure serial port settings (example for 9600 baud):
+   ```bash
+   stty -F /dev/ttyAMA1 9600 cs8 -cstopb -parenb
+   ```
+
+3. Add your user to the dialout group for serial access:
    ```bash
    sudo usermod -a -G dialout $USER
    ```
 
-3. Reboot to apply changes:
+4. Reboot to apply changes:
    ```bash
    sudo reboot
    ```
@@ -104,10 +112,9 @@ The standard bash command `echo "data" > /dev/ttyAMA1` does **not** wait for tra
 ## Technical Details
 
 - **Serial Device**: Configurable (e.g., `/dev/ttyAMA1`, `/dev/ttyUSB0`)
-- **Baud Rate**: 9600 bps
-- **Data Format**: 8N1 (8 data bits, no parity, 1 stop bit)
-- **Flow Control**: None
+- **Configuration**: Uses existing port settings (must be pre-configured)
 - **Transmission Guarantee**: Uses `tcdrain()` to wait for complete transmission
+- **Performance**: Lightweight - no configuration overhead per operation
 
 ## Troubleshooting
 
