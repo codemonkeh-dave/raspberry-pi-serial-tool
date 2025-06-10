@@ -20,6 +20,43 @@
 
 #define BUFFER_SIZE 1024
 
+// Function to convert hex digit character to integer
+int hex_digit_to_int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+// Function to parse hex escape sequences like \x41\x42 into actual bytes
+size_t parse_hex_string(const char *input, char *output, size_t max_output) {
+    size_t input_len = strlen(input);
+    size_t output_pos = 0;
+    size_t i = 0;
+    
+    while (i < input_len && output_pos < max_output - 1) {
+        if (i + 3 < input_len && input[i] == '\\' && input[i+1] == 'x') {
+            // Found \x sequence
+            int high = hex_digit_to_int(input[i+2]);
+            int low = hex_digit_to_int(input[i+3]);
+            
+            if (high >= 0 && low >= 0) {
+                // Valid hex sequence
+                output[output_pos++] = (char)((high << 4) | low);
+                i += 4;
+            } else {
+                // Invalid hex sequence, copy literally
+                output[output_pos++] = input[i++];
+            }
+        } else {
+            // Regular character
+            output[output_pos++] = input[i++];
+        }
+    }
+    
+    return output_pos;
+}
+
 int main(int argc, char *argv[]) {
     int serial_fd;
     char buffer[BUFFER_SIZE];
@@ -48,19 +85,20 @@ int main(int argc, char *argv[]) {
     // Note: Assumes serial port is already configured with proper baud rate and settings
     
     if (argc >= 3) {
-        // Send text from command line argument
+        // Send text from command line argument, parsing hex escape sequences
         const char *text = argv[2];
-        size_t text_len = strlen(text);
+        char parsed_buffer[BUFFER_SIZE];
+        size_t parsed_len = parse_hex_string(text, parsed_buffer, BUFFER_SIZE);
         
-        bytes_written = write(serial_fd, text, text_len);
+        bytes_written = write(serial_fd, parsed_buffer, parsed_len);
         if (bytes_written < 0) {
             fprintf(stderr, "Error writing to serial port: %s\n", strerror(errno));
             close(serial_fd);
             return 1;
         }
         
-        if ((size_t)bytes_written != text_len) {
-            fprintf(stderr, "Warning: Only wrote %zd of %zu bytes\n", bytes_written, text_len);
+        if ((size_t)bytes_written != parsed_len) {
+            fprintf(stderr, "Warning: Only wrote %zd of %zu bytes\n", bytes_written, parsed_len);
         }
     } else {
         // Read data from stdin and send to serial port
