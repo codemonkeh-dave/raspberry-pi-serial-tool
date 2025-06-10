@@ -1,12 +1,12 @@
 # Raspberry Pi Serial Tool
 
-A C program that reads data from stdin and sends it to the serial device `/dev/ttyAMA1`, ensuring complete transmission before exiting. This tool is critical for applications requiring guaranteed serial data delivery.
+A C program that reads data from stdin and sends it to a specified serial device, ensuring complete transmission before exiting. This tool is critical for applications requiring guaranteed serial data delivery.
 
 ## Features
 
 - Reads data from stdin (supports pipes and redirected input)
-- Sends data to `/dev/ttyAMA1` serial port
-- **Waits for complete transmission** using `ioctl(TIOCDRAIN)` - unlike simple shell redirection
+- Sends data to any specified serial port (e.g., `/dev/ttyAMA1`, `/dev/ttyUSB0`)
+- **Waits for complete transmission** using `tcdrain()` - unlike simple shell redirection
 - Configures serial port with 9600 baud, 8N1 (8 data bits, no parity, 1 stop bit)
 - Comprehensive error handling
 
@@ -67,22 +67,28 @@ make
 
 ### Basic Usage
 ```bash
-echo "Hello Serial" | ./serial_send
+echo "Hello Serial" | ./serial_send /dev/ttyAMA1
 ```
 
 ### Send File Contents
 ```bash
-cat data.txt | ./serial_send
+cat data.txt | ./serial_send /dev/ttyAMA1
 ```
 
 ### Send Multiple Lines
 ```bash
-printf "Line 1\nLine 2\nLine 3\n" | ./serial_send
+printf "Line 1\nLine 2\nLine 3\n" | ./serial_send /dev/ttyAMA1
+```
+
+### Using Different Serial Ports
+```bash
+echo "USB Serial" | ./serial_send /dev/ttyUSB0
+echo "Bluetooth" | ./serial_send /dev/rfcomm0
 ```
 
 ### Interactive Input
 ```bash
-./serial_send
+./serial_send /dev/ttyAMA1
 # Type your data, press Ctrl+D when finished
 ```
 
@@ -97,7 +103,7 @@ The standard bash command `echo "data" > /dev/ttyAMA1` does **not** wait for tra
 
 ## Technical Details
 
-- **Serial Device**: `/dev/ttyAMA1` (Raspberry Pi UART)
+- **Serial Device**: Configurable (e.g., `/dev/ttyAMA1`, `/dev/ttyUSB0`)
 - **Baud Rate**: 9600 bps
 - **Data Format**: 8N1 (8 data bits, no parity, 1 stop bit)
 - **Flow Control**: None
