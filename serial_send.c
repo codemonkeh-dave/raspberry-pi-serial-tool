@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
     
     serial_device = argv[1];
     
-    // Open serial device
-    serial_fd = open(serial_device, O_RDWR | O_NOCTTY);
+    // Open serial device in write-only mode
+    serial_fd = open(serial_device, O_WRONLY | O_NOCTTY);
     if (serial_fd < 0) {
         fprintf(stderr, "Error opening %s: %s\n", serial_device, strerror(errno));
         return 1;
