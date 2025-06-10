@@ -7,6 +7,7 @@
  * Usage: ./serial_send /dev/ttyAMA1 "hello world"
  *        ./serial_send /dev/ttyAMA1 "Line 1\nLine 2"
  *        ./serial_send /dev/ttyAMA1 "\x48\x65\x6c\x6c\x6f"  (hex bytes)
+ *        ./serial_send /dev/ttyAMA1 --hex "48656c6c6f"     (raw hex string)
  *        echo "your data" | ./serial_send /dev/ttyAMA1     (stdin fallback)
  */
 
@@ -57,6 +58,30 @@ size_t parse_hex_string(const char *input, char *output, size_t max_output) {
     return output_pos;
 }
 
+// Function to parse raw hex string like "48656c6c6f" into bytes
+size_t parse_raw_hex_string(const char *input, char *output, size_t max_output) {
+    size_t input_len = strlen(input);
+    size_t output_pos = 0;
+    
+    // Hex string must have even length
+    if (input_len % 2 != 0) {
+        return 0; // Invalid hex string
+    }
+    
+    for (size_t i = 0; i < input_len && output_pos < max_output - 1; i += 2) {
+        int high = hex_digit_to_int(input[i]);
+        int low = hex_digit_to_int(input[i + 1]);
+        
+        if (high >= 0 && low >= 0) {
+            output[output_pos++] = (char)((high << 4) | low);
+        } else {
+            return 0; // Invalid hex character
+        }
+    }
+    
+    return output_pos;
+}
+
 int main(int argc, char *argv[]) {
     int serial_fd;
     char buffer[BUFFER_SIZE];
@@ -65,10 +90,11 @@ int main(int argc, char *argv[]) {
     
     // Check command line arguments
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <serial_device> [text]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <serial_device> [--hex] [text]\n", argv[0]);
         fprintf(stderr, "Examples:\n");
         fprintf(stderr, "  %s /dev/ttyAMA1 \"hello world\"\n", argv[0]);
         fprintf(stderr, "  %s /dev/ttyAMA1 \"\\x48\\x65\\x6c\\x6c\\x6f\"  # hex bytes\n", argv[0]);
+        fprintf(stderr, "  %s /dev/ttyAMA1 --hex \"48656c6c6f\"     # raw hex string\n", argv[0]);
         fprintf(stderr, "  echo \"hello\" | %s /dev/ttyAMA1        # stdin fallback\n", argv[0]);
         return 1;
     }
@@ -85,10 +111,32 @@ int main(int argc, char *argv[]) {
     // Note: Assumes serial port is already configured with proper baud rate and settings
     
     if (argc >= 3) {
-        // Send text from command line argument, parsing hex escape sequences
-        const char *text = argv[2];
+        // Check for --hex flag
+        int hex_mode = 0;
+        const char *text;
+        
+        if (argc >= 4 && strcmp(argv[2], "--hex") == 0) {
+            hex_mode = 1;
+            text = argv[3];
+        } else {
+            text = argv[2];
+        }
+        
         char parsed_buffer[BUFFER_SIZE];
-        size_t parsed_len = parse_hex_string(text, parsed_buffer, BUFFER_SIZE);
+        size_t parsed_len;
+        
+        if (hex_mode) {
+            // Parse raw hex string like "48656c6c6f"
+            parsed_len = parse_raw_hex_string(text, parsed_buffer, BUFFER_SIZE);
+            if (parsed_len == 0) {
+                fprintf(stderr, "Error: Invalid hex string '%s'\n", text);
+                close(serial_fd);
+                return 1;
+            }
+        } else {
+            // Parse regular string with hex escape sequences like "\x48\x65\x6c\x6c\x6f"
+            parsed_len = parse_hex_string(text, parsed_buffer, BUFFER_SIZE);
+        }
         
         bytes_written = write(serial_fd, parsed_buffer, parsed_len);
         if (bytes_written < 0) {
