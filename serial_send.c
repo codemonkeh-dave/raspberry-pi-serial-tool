@@ -17,26 +17,13 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-// Feature test macro for additional terminal constants
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
-// Additional includes for serial constants
-#include <linux/serial.h>
-#include <asm/ioctls.h>
-
 #define SERIAL_DEVICE "/dev/ttyAMA1"
 #define BAUD_RATE B9600
 #define BUFFER_SIZE 1024
 
-// Fallback definitions for missing constants
+// Fallback definition for CRTSCTS if not available
 #ifndef CRTSCTS
 #define CRTSCTS 020000000000
-#endif
-
-#ifndef TIOCDRAIN
-#define TIOCDRAIN 0x540F
 #endif
 
 int main() {
@@ -107,7 +94,7 @@ int main() {
     
     // CRITICAL: Wait for all data to be transmitted
     // This ensures the serial transmission is complete before the program exits
-    if (ioctl(serial_fd, TIOCDRAIN) < 0) {
+    if (tcdrain(serial_fd) < 0) {
         fprintf(stderr, "Error waiting for transmission to complete: %s\n", strerror(errno));
         close(serial_fd);
         return 1;

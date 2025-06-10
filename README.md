@@ -88,7 +88,7 @@ printf "Line 1\nLine 2\nLine 3\n" | ./serial_send
 
 ## Why This Tool?
 
-The standard bash command `echo "data" > /dev/ttyAMA1` does **not** wait for transmission completion. This tool uses `ioctl(TIOCDRAIN)` to ensure all data is physically transmitted before the program exits, which is critical for:
+The standard bash command `echo "data" > /dev/ttyAMA1` does **not** wait for transmission completion. This tool uses `tcdrain()` to ensure all data is physically transmitted before the program exits, which is critical for:
 
 - Reliable serial communication
 - Preventing data loss
@@ -101,7 +101,7 @@ The standard bash command `echo "data" > /dev/ttyAMA1` does **not** wait for tra
 - **Baud Rate**: 9600 bps
 - **Data Format**: 8N1 (8 data bits, no parity, 1 stop bit)
 - **Flow Control**: None
-- **Transmission Guarantee**: Uses `ioctl(TIOCDRAIN)` to wait for complete transmission
+- **Transmission Guarantee**: Uses `tcdrain()` to wait for complete transmission
 
 ## Troubleshooting
 
