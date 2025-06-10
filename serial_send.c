@@ -17,9 +17,27 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
+// Feature test macro for additional terminal constants
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+// Additional includes for serial constants
+#include <linux/serial.h>
+#include <asm/ioctls.h>
+
 #define SERIAL_DEVICE "/dev/ttyAMA1"
 #define BAUD_RATE B9600
 #define BUFFER_SIZE 1024
+
+// Fallback definitions for missing constants
+#ifndef CRTSCTS
+#define CRTSCTS 020000000000
+#endif
+
+#ifndef TIOCDRAIN
+#define TIOCDRAIN 0x540F
+#endif
 
 int main() {
     int serial_fd;
