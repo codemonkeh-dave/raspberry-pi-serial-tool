@@ -1,10 +1,11 @@
 # Raspberry Pi Serial Tool
 
-A C program that reads data from stdin and sends it to a specified serial device, ensuring complete transmission before exiting. This tool is critical for applications requiring guaranteed serial data delivery.
+A C program that sends data to a specified serial device, either from command line argument or stdin, ensuring complete transmission before exiting. This tool is critical for applications requiring guaranteed serial data delivery.
 
 ## Features
 
-- Reads data from stdin (supports pipes and redirected input)
+- Accepts text as command line argument or reads from stdin (supports pipes and redirected input)
+- Supports hex byte sequences using escape sequences (\x41\x42\x43)
 - Sends data to any specified serial port (e.g., `/dev/ttyAMA1`, `/dev/ttyUSB0`)
 - **Waits for complete transmission** using `tcdrain()` - unlike simple shell redirection
 - **Assumes serial port is pre-configured** - doesn't modify existing settings
@@ -73,25 +74,34 @@ make
 
 ## Usage
 
-### Basic Usage
+### Basic Usage with Text Argument
 ```bash
-echo "Hello Serial" | ./serial_send /dev/ttyAMA1
-```
-
-### Send File Contents
-```bash
-cat data.txt | ./serial_send /dev/ttyAMA1
+./serial_send /dev/ttyAMA1 "Hello Serial"
+./serial_send /dev/ttyUSB0 "AT+CGMI"
 ```
 
 ### Send Multiple Lines
 ```bash
-printf "Line 1\nLine 2\nLine 3\n" | ./serial_send /dev/ttyAMA1
+./serial_send /dev/ttyAMA1 "Line 1\nLine 2\nLine 3"
+```
+
+### Send Hex Bytes
+```bash
+./serial_send /dev/ttyAMA1 "\x48\x65\x6c\x6c\x6f"  # "Hello" in hex
+./serial_send /dev/ttyAMA1 "\x41\x54\x0D\x0A"      # "AT\r\n"
 ```
 
 ### Using Different Serial Ports
 ```bash
-echo "USB Serial" | ./serial_send /dev/ttyUSB0
-echo "Bluetooth" | ./serial_send /dev/rfcomm0
+./serial_send /dev/ttyUSB0 "USB Serial Message"
+./serial_send /dev/rfcomm0 "Bluetooth Message"
+```
+
+### Stdin Fallback (when no text argument provided)
+```bash
+echo "Hello Serial" | ./serial_send /dev/ttyAMA1
+cat data.txt | ./serial_send /dev/ttyAMA1
+printf "Line 1\nLine 2\nLine 3\n" | ./serial_send /dev/ttyAMA1
 ```
 
 ### Interactive Input

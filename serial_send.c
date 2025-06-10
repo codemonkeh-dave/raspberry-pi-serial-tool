@@ -1,11 +1,13 @@
 /*
  * Raspberry Pi Serial Tool
  * 
- * Reads data from stdin and sends it to specified serial device
+ * Sends data to specified serial device, either from command line argument or stdin
  * Waits for complete transmission before exiting
  * 
- * Usage: echo "your data" | ./serial_send /dev/ttyAMA1
- *        cat file.txt | ./serial_send /dev/ttyUSB0
+ * Usage: ./serial_send /dev/ttyAMA1 "hello world"
+ *        ./serial_send /dev/ttyAMA1 "Line 1\nLine 2"
+ *        ./serial_send /dev/ttyAMA1 "\x48\x65\x6c\x6c\x6f"  (hex bytes)
+ *        echo "your data" | ./serial_send /dev/ttyAMA1     (stdin fallback)
  */
 
 #include <stdio.h>
@@ -26,9 +28,11 @@ int main(int argc, char *argv[]) {
     
     // Check command line arguments
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <serial_device>\n", argv[0]);
-        fprintf(stderr, "Example: echo \"hello\" | %s /dev/ttyAMA1\n", argv[0]);
-        fprintf(stderr, "         cat file.txt | %s /dev/ttyUSB0\n", argv[0]);
+        fprintf(stderr, "Usage: %s <serial_device> [text]\n", argv[0]);
+        fprintf(stderr, "Examples:\n");
+        fprintf(stderr, "  %s /dev/ttyAMA1 \"hello world\"\n", argv[0]);
+        fprintf(stderr, "  %s /dev/ttyAMA1 \"\\x48\\x65\\x6c\\x6c\\x6f\"  # hex bytes\n", argv[0]);
+        fprintf(stderr, "  echo \"hello\" | %s /dev/ttyAMA1        # stdin fallback\n", argv[0]);
         return 1;
     }
     
@@ -43,25 +47,42 @@ int main(int argc, char *argv[]) {
     
     // Note: Assumes serial port is already configured with proper baud rate and settings
     
-    // Read data from stdin and send to serial port
-    while ((bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE)) > 0) {
-        // Write data to serial port
-        bytes_written = write(serial_fd, buffer, bytes_read);
+    if (argc >= 3) {
+        // Send text from command line argument
+        const char *text = argv[2];
+        size_t text_len = strlen(text);
+        
+        bytes_written = write(serial_fd, text, text_len);
         if (bytes_written < 0) {
             fprintf(stderr, "Error writing to serial port: %s\n", strerror(errno));
             close(serial_fd);
             return 1;
         }
         
-        if (bytes_written != bytes_read) {
-            fprintf(stderr, "Warning: Only wrote %zd of %zd bytes\n", bytes_written, bytes_read);
+        if ((size_t)bytes_written != text_len) {
+            fprintf(stderr, "Warning: Only wrote %zd of %zu bytes\n", bytes_written, text_len);
         }
-    }
-    
-    if (bytes_read < 0) {
-        fprintf(stderr, "Error reading from stdin: %s\n", strerror(errno));
-        close(serial_fd);
-        return 1;
+    } else {
+        // Read data from stdin and send to serial port
+        while ((bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE)) > 0) {
+            // Write data to serial port
+            bytes_written = write(serial_fd, buffer, bytes_read);
+            if (bytes_written < 0) {
+                fprintf(stderr, "Error writing to serial port: %s\n", strerror(errno));
+                close(serial_fd);
+                return 1;
+            }
+            
+            if (bytes_written != bytes_read) {
+                fprintf(stderr, "Warning: Only wrote %zd of %zd bytes\n", bytes_written, bytes_read);
+            }
+        }
+        
+        if (bytes_read < 0) {
+            fprintf(stderr, "Error reading from stdin: %s\n", strerror(errno));
+            close(serial_fd);
+            return 1;
+        }
     }
     
     // CRITICAL: Wait for all data to be transmitted
